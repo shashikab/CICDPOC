@@ -44,6 +44,10 @@ pipeline {
                     passwordVariable: 'GIT_PASSWORD'
                 )]) {
                     sh '''
+
+                        # 0) Make SSH → HTTPS happen behind the scenes (keeps the script the same)
+                        git config --global url."https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/".insteadOf "git@github.com:"
+        
                         # 1) Fresh clone
                         rm -rf git-init
                         git clone "${GIT_REPO_SSH}" git-init
