@@ -37,64 +37,54 @@ pipeline {
         }
 
         stage('Push to Main') {
-  steps {
-    withCredentials([usernamePassword(
-      credentialsId: '0974d876-1b01-46b2-bf2c-4f3cdecd3502',
-      usernameVariable: 'GIT_USERNAME',
-      passwordVariable: 'GIT_PASSWORD'
-    )]) {
-      sh '''
-        set -e
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: '0974d876-1b01-46b2-bf2c-4f3cdecd3502',
+                    usernameVariable: 'GIT_USERNAME',
+                    passwordVariable: 'GIT_PASSWORD'
+                )]) {
+                    sh '''
+                        # 1) Fresh clone
+                        rm -rf git-init
+                        git clone "${GIT_REPO_SSH}" git-init
 
-        # Avoid using any cached/stale macOS keychain helpers
-        git config --global credential.helper ""
+                        # 2) Copy out swagger.yaml for init
+                        mkdir -p "${WORKSPACE}/tmp"
+                        cp -R "${WORKSPACE}/git-init/swagger.yaml" "${WORKSPACE}/tmp"
 
-        # Create a minimal askpass script so Git can read username/token non-interactively
-        ASK=$(mktemp)
-        cat > "$ASK" <<'EOF'
-#!/usr/bin/env bash
-case "$1" in
-  *Username*) echo "$GIT_USERNAME" ;;
-  *Password*) echo "$GIT_PASSWORD" ;;
-esac
-EOF
-        chmod +x "$ASK"
+                        # 3) Initialize the API in the cloned workspace
+                        ~/apictl init "${WORKSPACE}/git-init/SampleAPI" \
+                          --oas "${OAS_FILE}" \
+                          --force
 
-        # 1) Fresh clone over HTTPS (no creds in the URL)
-        rm -rf git-init
-        GIT_ASKPASS="$ASK" git clone https://github.com/shashikab/CICDPOC.git git-init
+                        # 4) Clean up old swagger.yaml from git-init
+                        if [ -f "${WORKSPACE}/git-init/swagger.yaml" ]; then
+                          echo "Removing old swagger.yaml from git-init…"
+                          rm -f "${WORKSPACE}/git-init/swagger.yaml"
+                        fi
 
-        # 2) apictl init using the swagger inside the repo
-        OAS_FILE_PATH="${WORKSPACE}/git-init/swagger.yaml"
-        ~/apictl init "${WORKSPACE}/git-init/SampleAPI" --oas "${OAS_FILE_PATH}" --force
-        [ -f "${WORKSPACE}/git-init/swagger.yaml" ] && rm -f "${WORKSPACE}/git-init/swagger.yaml"
+                        # 5) Move into repo root for Git operations
+                        cd "${WORKSPACE}/git-init"
 
-        # 3) Git identity & branch setup
-        cd "${WORKSPACE}/git-init"
-        git config user.name  "${GIT_USERNAME}"
-        git config user.email "${GIT_USERNAME}@users.noreply.github.com"
+                        # 6) Configure Git user
+                        git config user.name  "${GIT_USERNAME}"
+                        git config user.email "${GIT_USERNAME}@users.noreply.github.com"
 
-        if git ls-remote --exit-code --heads origin "${TARGET_BRANCH}" > /dev/null 2>&1; then
-          git fetch origin "${TARGET_BRANCH}"
-          git checkout -B "${TARGET_BRANCH}" "origin/${TARGET_BRANCH}"
-        else
-          git checkout -B "${TARGET_BRANCH}"
-        fi
+                        # 7) Switch remote to HTTPS with embedded credentials and checkout branch
+                        git remote set-url origin \
+                          "https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/shashikab/CICDPOC.git"
+                        git fetch origin ${TARGET_BRANCH} || true
+                        git checkout -B ${TARGET_BRANCH} origin/${TARGET_BRANCH}
 
-        # 4) Commit if there are changes, then push using askpass
-        git add --all
-        if ! git diff --cached --quiet; then
-          git commit -m "Automated export of ${API_NAME} v${API_VERSION}, build #${BUILD_NUMBER}"
-          GIT_ASKPASS="$ASK" git push -u origin "${TARGET_BRANCH}"
-        else
-          echo "No changes to commit."
-        fi
-      '''
-    }
-  }
-}
-
-
+                        # 8) Stage, commit & push changes
+                        git add --all
+                        git diff-index --quiet HEAD || \
+                          git commit -m "Automated export of ${API_NAME} v${API_VERSION}, build #${BUILD_NUMBER}"
+                        git push --set-upstream origin ${TARGET_BRANCH}
+                    '''
+                }
+            }
+        }
     }
 
     post {
