@@ -46,36 +46,34 @@ pipeline {
       sh '''
         set -e
 
-        # 0) Route ALL https://github.com URLs through the injected creds (keeps logs cleaner)
-        git config --global url."https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/".insteadOf "https://github.com/"
+        # Avoid using any cached/stale macOS keychain helpers
+        git config --global credential.helper ""
 
-        # 1) Fresh clone (HTTPS, not SSH)
+        # Create a minimal askpass script so Git can read username/token non-interactively
+        ASK=$(mktemp)
+        cat > "$ASK" <<'EOF'
+#!/usr/bin/env bash
+case "$1" in
+  *Username*) echo "$GIT_USERNAME" ;;
+  *Password*) echo "$GIT_PASSWORD" ;;
+esac
+EOF
+        chmod +x "$ASK"
+
+        # 1) Fresh clone over HTTPS (no creds in the URL)
         rm -rf git-init
-        git clone https://github.com/shashikab/CICDPOC.git git-init
+        GIT_ASKPASS="$ASK" git clone https://github.com/shashikab/CICDPOC.git git-init
 
-        # 2) OAS path (use the file inside the cloned repo)
+        # 2) apictl init using the swagger inside the repo
         OAS_FILE_PATH="${WORKSPACE}/git-init/swagger.yaml"
+        ~/apictl init "${WORKSPACE}/git-init/SampleAPI" --oas "${OAS_FILE_PATH}" --force
+        [ -f "${WORKSPACE}/git-init/swagger.yaml" ] && rm -f "${WORKSPACE}/git-init/swagger.yaml"
 
-        # (Optional) If you really need a temp copy, uncomment next two lines:
-        # mkdir -p "${WORKSPACE}/tmp"
-        # cp -f "${WORKSPACE}/git-init/swagger.yaml" "${WORKSPACE}/tmp/swagger.yaml"
-
-        # 3) Initialize the API in the cloned workspace using apictl
-        ~/apictl init "${WORKSPACE}/git-init/SampleAPI" \
-          --oas "${OAS_FILE_PATH}" \
-          --force
-
-        # 4) Remove stray top-level swagger.yaml in repo root if you don’t want it committed
-        if [ -f "${WORKSPACE}/git-init/swagger.yaml" ]; then
-          rm -f "${WORKSPACE}/git-init/swagger.yaml"
-        fi
-
-        # 5) Git user + branch
+        # 3) Git identity & branch setup
         cd "${WORKSPACE}/git-init"
         git config user.name  "${GIT_USERNAME}"
         git config user.email "${GIT_USERNAME}@users.noreply.github.com"
 
-        # Make sure target branch exists locally; create it if remote is missing
         if git ls-remote --exit-code --heads origin "${TARGET_BRANCH}" > /dev/null 2>&1; then
           git fetch origin "${TARGET_BRANCH}"
           git checkout -B "${TARGET_BRANCH}" "origin/${TARGET_BRANCH}"
@@ -83,11 +81,11 @@ pipeline {
           git checkout -B "${TARGET_BRANCH}"
         fi
 
-        # 6) Stage, commit (only if changes), and push
+        # 4) Commit if there are changes, then push using askpass
         git add --all
         if ! git diff --cached --quiet; then
           git commit -m "Automated export of ${API_NAME} v${API_VERSION}, build #${BUILD_NUMBER}"
-          git push -u origin "${TARGET_BRANCH}"
+          GIT_ASKPASS="$ASK" git push -u origin "${TARGET_BRANCH}"
         else
           echo "No changes to commit."
         fi
@@ -95,6 +93,7 @@ pipeline {
     }
   }
 }
+
 
     }
 
