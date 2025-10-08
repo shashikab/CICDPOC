@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: BookstoreAPI
   description: |
-    A simple REST API to browse and purchase books.
+    A simple REST - API to browse and purchase books.
   contact:
     name: API Support
     email: support@bookstore.example.com
