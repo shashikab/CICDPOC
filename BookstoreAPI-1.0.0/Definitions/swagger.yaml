@@ -1,0 +1,635 @@
+openapi: 3.0.0
+info:
+  title: BookstoreAPI
+  description: |
+    A simple REST- API to browse and purchase books.
+  contact:
+    name: API Support
+    email: support@bookstore.example.com
+  version: 1.0.0
+servers:
+ -
+  url: https://api.bookstore.example.com/v1
+  description: Production server
+security:
+ -
+  default: []
+tags:
+ -
+  name: books
+  description: Operations on books
+ -
+  name: orders
+  description: Customer orders
+paths:
+  /books:
+    get:
+      tags:
+       - books
+      summary: List all books
+      operationId: listBooks
+      parameters:
+       -
+        name: author
+        in: query
+        description: Filter by author name
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: A JSON array of book objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Book"
+      security:
+       -
+        default: []
+      x-auth-type: Application & Application User
+      x-mediation-script: |-
+        var accept = mc.getProperty('AcceptHeader');
+        var responseCode = mc.getProperty('query.param.responseCode');
+        var responseCodeSC;
+        var responses = [];
+
+        if (!responses[200]) {
+         responses [200] = [];
+        }
+        responses[200]["application/json"] = [ {
+          "id": "123e4567-e89b-12d3-a456-426614174000",
+          "title": "The Great Gatsby",
+          "author": "F. Scott Fitzgerald",
+          "publishedDate": "1925-04-10",
+          "price": 10.99
+        }
+        ,
+        {
+          "id": "42",
+          "title": "To Kill a Mockingbird",
+          "author": "Harper Lee",
+          "publishedDate": "1960-07-11",
+          "price": 8.50
+        }
+          ];
+
+        responses[501] = [];
+        responses[501]["application/json"] = {
+        "code" : 501,
+        "description" : "Not Implemented"}
+        responses[501]["application/xml"] = <response><code>501</code><description>Not Implemented</description></response>;
+
+        if (responseCode == null) {
+         responseCode = 200;
+        }
+
+        if (!responses[responseCode]) {
+          if (responses["default"]) {
+            responseCode = "default"
+          } else {
+            responseCode = 501;
+          }
+        }
+        if (responseCode === "default") {
+          responseCodeSC = mc.getProperty('query.param.responseCode');
+        } else {
+          responseCodeSC = responseCode;
+        }
+        if (accept == null || !responses[responseCode][accept]) {
+         accept = "application/json"; // assign whatever available
+        }
+
+        if (accept == "application/json") {
+         mc.setProperty('CONTENT_TYPE', 'application/json');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadJSON(responses[responseCode]["application/json"]);
+        }
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+         - oauth2
+        optional: false
+    post:
+      tags:
+       - books
+      summary: Add a new book
+      operationId: createBook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewBook"
+        required: true
+      responses:
+        "201":
+          description: Book created
+          headers:
+            Location:
+              description: URL of the new book
+              style: simple
+              explode: false
+              schema:
+                type: string
+      security:
+       -
+        default: []
+      x-auth-type: Application & Application User
+      x-mediation-script: |-
+        var accept = mc.getProperty('AcceptHeader');
+        var responseCode = mc.getProperty('query.param.responseCode');
+        var responseCodeSC;
+        var responses = [];
+        if (!responses[201]) {
+          responses[201] = [];
+        }
+        responses[201]["application/json"] = "";
+        responses[201]["application/xml"] = "";
+
+
+        responses[501] = [];
+        responses[501]["application/json"] = {
+        "code" : 501,
+        "description" : "Not Implemented"}
+        responses[501]["application/xml"] = <response><code>501</code><description>Not Implemented</description></response>;
+
+        if (responseCode == null) {
+         responseCode = 201;
+        }
+
+        if (!responses[responseCode]) {
+          if (responses["default"]) {
+            responseCode = "default"
+          } else {
+            responseCode = 501;
+          }
+        }
+        if (responseCode === "default") {
+          responseCodeSC = mc.getProperty('query.param.responseCode');
+        } else {
+          responseCodeSC = responseCode;
+        }
+        if (accept == null || !responses[responseCode][accept]) {
+         accept = "application/json";
+        }
+
+        if (accept == "application/json") {
+         mc.setProperty('CONTENT_TYPE', 'application/json');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadJSON(responses[responseCode]["application/json"]);
+        } else if (accept == "application/xml") {
+         mc.setProperty('CONTENT_TYPE', 'application/xml');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadXML(responses[responseCode]["application/xml"]);
+        }
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+         - oauth2
+        optional: false
+  /books/{bookId}:
+    get:
+      tags:
+       - books
+      summary: Get a book by ID
+      operationId: getBook
+      responses:
+        "200":
+          description: Book details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+      security:
+       -
+        default: []
+      x-auth-type: Application & Application User
+      x-mediation-script: |-
+        var accept = mc.getProperty('AcceptHeader');
+        var responseCode = mc.getProperty('query.param.responseCode');
+        var responseCodeSC;
+        var responses = [];
+
+        if (!responses[200]) {
+         responses [200] = [];
+        }
+        responses[200]["application/json"] = {
+          "id" : "string",
+          "title" : "string",
+          "author" : "string",
+          "publishedDate" : "2015-07-20",
+          "price" : 1.1
+        };
+        if (!responses[404]) {
+          responses[404] = [];
+        }
+        responses[404]["application/json"] = "";
+        responses[404]["application/xml"] = "";
+
+
+        responses[501] = [];
+        responses[501]["application/json"] = {
+        "code" : 501,
+        "description" : "Not Implemented"}
+        responses[501]["application/xml"] = <response><code>501</code><description>Not Implemented</description></response>;
+
+        if (responseCode == null) {
+         responseCode = 200;
+        }
+
+        if (!responses[responseCode]) {
+          if (responses["default"]) {
+            responseCode = "default"
+          } else {
+            responseCode = 501;
+          }
+        }
+        if (responseCode === "default") {
+          responseCodeSC = mc.getProperty('query.param.responseCode');
+        } else {
+          responseCodeSC = responseCode;
+        }
+        if (accept == null || !responses[responseCode][accept]) {
+         accept = "application/json";
+        }
+
+        if (accept == "application/json") {
+         mc.setProperty('CONTENT_TYPE', 'application/json');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadJSON(responses[responseCode]["application/json"]);
+        } else if (accept == "application/xml") {
+         mc.setProperty('CONTENT_TYPE', 'application/xml');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadXML(responses[responseCode]["application/xml"]);
+        }
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+         - oauth2
+        optional: false
+    put:
+      tags:
+       - books
+      summary: Update a book
+      operationId: updateBook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Book"
+        required: true
+      responses:
+        "200":
+          description: Book updated
+      security:
+       -
+        default: []
+      x-auth-type: Application & Application User
+      x-mediation-script: |-
+        var accept = mc.getProperty('AcceptHeader');
+        var responseCode = mc.getProperty('query.param.responseCode');
+        var responseCodeSC;
+        var responses = [];
+        if (!responses[200]) {
+          responses[200] = [];
+        }
+        responses[200]["application/json"] = "";
+        responses[200]["application/xml"] = "";
+
+
+        responses[501] = [];
+        responses[501]["application/json"] = {
+        "code" : 501,
+        "description" : "Not Implemented"}
+        responses[501]["application/xml"] = <response><code>501</code><description>Not Implemented</description></response>;
+
+        if (responseCode == null) {
+         responseCode = 200;
+        }
+
+        if (!responses[responseCode]) {
+          if (responses["default"]) {
+            responseCode = "default"
+          } else {
+            responseCode = 501;
+          }
+        }
+        if (responseCode === "default") {
+          responseCodeSC = mc.getProperty('query.param.responseCode');
+        } else {
+          responseCodeSC = responseCode;
+        }
+        if (accept == null || !responses[responseCode][accept]) {
+         accept = "application/json";
+        }
+
+        if (accept == "application/json") {
+         mc.setProperty('CONTENT_TYPE', 'application/json');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadJSON(responses[responseCode]["application/json"]);
+        } else if (accept == "application/xml") {
+         mc.setProperty('CONTENT_TYPE', 'application/xml');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadXML(responses[responseCode]["application/xml"]);
+        }
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+         - oauth2
+        optional: false
+    delete:
+      tags:
+       - books
+      summary: Delete a book
+      operationId: deleteBook
+      responses:
+        "204":
+          description: Book deleted
+      security:
+       -
+        default: []
+      x-auth-type: Application & Application User
+      x-mediation-script: |-
+        var accept = mc.getProperty('AcceptHeader');
+        var responseCode = mc.getProperty('query.param.responseCode');
+        var responseCodeSC;
+        var responses = [];
+        if (!responses[204]) {
+          responses[204] = [];
+        }
+        responses[204]["application/json"] = "";
+        responses[204]["application/xml"] = "";
+
+
+        responses[501] = [];
+        responses[501]["application/json"] = {
+        "code" : 501,
+        "description" : "Not Implemented"}
+        responses[501]["application/xml"] = <response><code>501</code><description>Not Implemented</description></response>;
+
+        if (responseCode == null) {
+         responseCode = 204;
+        }
+
+        if (!responses[responseCode]) {
+          if (responses["default"]) {
+            responseCode = "default"
+          } else {
+            responseCode = 501;
+          }
+        }
+        if (responseCode === "default") {
+          responseCodeSC = mc.getProperty('query.param.responseCode');
+        } else {
+          responseCodeSC = responseCode;
+        }
+        if (accept == null || !responses[responseCode][accept]) {
+         accept = "application/json";
+        }
+
+        if (accept == "application/json") {
+         mc.setProperty('CONTENT_TYPE', 'application/json');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadJSON(responses[responseCode]["application/json"]);
+        } else if (accept == "application/xml") {
+         mc.setProperty('CONTENT_TYPE', 'application/xml');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadXML(responses[responseCode]["application/xml"]);
+        }
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+         - oauth2
+        optional: false
+    parameters:
+     -
+      $ref: "#/components/parameters/BookId"
+  /orders:
+    post:
+      tags:
+       - orders
+      summary: Place a book order
+      operationId: placeOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderRequest"
+        required: true
+      responses:
+        "201":
+          description: Order placed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+      security:
+       -
+        default: []
+      x-auth-type: Application & Application User
+      x-mediation-script: |-
+        var accept = mc.getProperty('AcceptHeader');
+        var responseCode = mc.getProperty('query.param.responseCode');
+        var responseCodeSC;
+        var responses = [];
+
+        if (!responses[201]) {
+         responses [201] = [];
+        }
+        responses[201]["application/json"] = {
+          "orderId" : "string",
+          "bookId" : "string",
+          "quantity" : 0,
+          "totalPrice" : 1.1,
+          "status" : "pending"
+        };
+        if (!responses[400]) {
+          responses[400] = [];
+        }
+        responses[400]["application/json"] = "";
+        responses[400]["application/xml"] = "";
+
+
+        responses[501] = [];
+        responses[501]["application/json"] = {
+        "code" : 501,
+        "description" : "Not Implemented"}
+        responses[501]["application/xml"] = <response><code>501</code><description>Not Implemented</description></response>;
+
+        if (responseCode == null) {
+         responseCode = 201;
+        }
+
+        if (!responses[responseCode]) {
+          if (responses["default"]) {
+            responseCode = "default"
+          } else {
+            responseCode = 501;
+          }
+        }
+        if (responseCode === "default") {
+          responseCodeSC = mc.getProperty('query.param.responseCode');
+        } else {
+          responseCodeSC = responseCode;
+        }
+        if (accept == null || !responses[responseCode][accept]) {
+         accept = "application/json";
+        }
+
+        if (accept == "application/json") {
+         mc.setProperty('CONTENT_TYPE', 'application/json');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadJSON(responses[responseCode]["application/json"]);
+        } else if (accept == "application/xml") {
+         mc.setProperty('CONTENT_TYPE', 'application/xml');
+         mc.setProperty('HTTP_SC', responseCodeSC + "");
+         mc.setPayloadXML(responses[responseCode]["application/xml"]);
+        }
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+         - oauth2
+        optional: false
+components:
+  schemas:
+    Book:
+      required:
+       - author
+       - id
+       - title
+      type: object
+      properties:
+        author:
+          type: string
+        id:
+          type: string
+        price:
+          type: number
+          format: float
+        publishedDate:
+          type: string
+          format: date
+        title:
+          type: string
+    Error:
+      required:
+       - code
+       - message
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+    NewBook:
+      required:
+       - author
+       - title
+      allOf:
+       -
+        $ref: "#/components/schemas/Book"
+    Order:
+      type: object
+      properties:
+        bookId:
+          type: string
+        orderId:
+          type: string
+        quantity:
+          type: integer
+        status:
+          type: string
+          enum:
+           - pending
+           - shipped
+           - delivered
+        totalPrice:
+          type: number
+          format: float
+    OrderRequest:
+      required:
+       - bookId
+       - quantity
+      type: object
+      properties:
+        bookId:
+          type: string
+        quantity:
+          minimum: 1
+          type: integer
+  responses:
+    BadRequestError:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  parameters:
+    BookId:
+      name: bookId
+      in: path
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+  securitySchemes:
+    default:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://test.com
+          scopes: {}
+x-wso2-api-key-header: ApiKey
+x-wso2-auth-header: Authorization
+x-wso2-cors:
+  corsConfigurationEnabled: true
+  accessControlAllowOrigins:
+   - '*'
+  accessControlAllowCredentials: false
+  accessControlAllowHeaders:
+   - authorization
+   - Access-Control-Allow-Origin
+   - Content-Type
+   - SOAPAction
+   - apikey
+   - Internal-Key
+  accessControlAllowMethods:
+   - GET
+   - PUT
+   - POST
+   - DELETE
+   - PATCH
+   - OPTIONS
+x-wso2-production-endpoints:
+  urls:
+   - http://localhost
+  type: http
+x-wso2-sandbox-endpoints:
+  urls:
+   - http://localhost
+  type: http
+x-wso2-basePath: /bookstoreapi/1.0.0
+x-wso2-transports:
+ - http
+ - https
+x-wso2-application-security:
+  security-types:
+   - oauth2
+  optional: false
+x-wso2-response-cache:
+  enabled: false
+  cacheTimeoutInSeconds: 300
