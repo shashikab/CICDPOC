@@ -99,14 +99,6 @@ pipeline {
             }
         }
        
-        //stage('Validate API to dev') {
-            //steps {
-           //     echo "Deploying the API project..."
-          //      sh '''
-           //         ~/apictl import api --file ./SampleAPI --environment dev -k --update --rotate-revision --dry-run
-           //     '''
-          //  }
-       // }
        
        stage('Validate API to dev') {
       steps {
