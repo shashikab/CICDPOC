@@ -1,0 +1,49 @@
+type: api
+version: v4.4.0
+data:
+  name: BookstoreAPI
+  description: |
+    A simple REST- API to browse and purchase books.
+  context: /bookstoreapi
+  version: 1.0.0
+  provider: admin
+  lifeCycleStatus: CREATED
+  isDefaultVersion: true
+  isRevision: false
+  revisionId: 0
+  type: HTTP
+  transport:
+  - http
+  - https
+  tags:
+  - books
+  - orders
+  policies:
+  - Unlimited
+  visibility: PUBLIC
+  corsConfiguration:
+    corsConfigurationEnabled: true
+    accessControlAllowOrigins:
+    - '*'
+    accessControlAllowHeaders:
+    - authorization
+    - Access-Control-Allow-Origin
+    - Content-Type
+    - SOAPAction
+    - apikey
+    - Internal-Key
+    accessControlAllowMethods:
+    - GET
+    - PUT
+    - POST
+    - DELETE
+    - PATCH
+    - OPTIONS
+  endpointConfig:
+    endpoint_type: http
+    production_endpoints:
+      url: http://localhost
+    sandbox_endpoints:
+      url: http://localhost
+  endpointImplementationType: ENDPOINT
+  websubSubscriptionConfiguration: null
